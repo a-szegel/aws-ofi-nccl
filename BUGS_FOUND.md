@@ -247,3 +247,17 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Test that caught it:** Manual code review of error paths in RDMA flush allocation.
 
 **Fix:** Call `req->free(req, false)` before returning `-ENOMEM` when flush buffer allocation fails. The `free_flush_req` function already handles a NULL `flush_fl_elem` safely.
+
+---
+
+## Bug 10: Freelist leak in `create_send_comm` error path (FIXED)
+
+**Location:** `src/nccl_ofi_rdma.cpp`, function `nccl_net_ofi_rdma_ep_t::create_send_comm()`, error label (~line 6130)
+
+**Cause:** When `reg_internal_mr()` fails after `nccl_ofi_reqs_fl` has been allocated with `new`, the error path calls `free_rdma_send_comm()` which only frees the `calloc`'d members (rails, control_rails, ctrl_mailbox) and the comm struct itself. It does NOT `delete` the `nccl_ofi_reqs_fl` freelist. The analogous error path in `prepare_recv_comm()` correctly deletes `nccl_ofi_reqs_fl` before calling `free_rdma_recv_comm()`.
+
+**Impact:** If MR registration fails during send communicator creation, the request freelist (and all its internal allocations) is leaked. This can happen under memory pressure or when the provider rejects the registration.
+
+**Test that caught it:** Manual code review comparing error paths of `create_send_comm` vs `prepare_recv_comm`.
+
+**Fix:** Add `delete ret_s_comm->nccl_ofi_reqs_fl;` before `free_rdma_send_comm(ret_s_comm)` in the error path.

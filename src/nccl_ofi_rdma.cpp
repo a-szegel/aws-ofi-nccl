@@ -6127,6 +6127,7 @@ int nccl_net_ofi_rdma_ep_t::create_send_comm(nccl_net_ofi_rdma_send_comm_t **s_c
 		domain_ptr->domain_lock.lock();
 		this->decrement_ref_cnt();
 		domain_ptr->domain_lock.unlock();
+		delete ret_s_comm->nccl_ofi_reqs_fl;
 		free_rdma_send_comm(ret_s_comm);
 	}
 
