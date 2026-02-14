@@ -146,3 +146,28 @@ leaked.
 
 **Test that caught it:** `GetProvidersTest.ProvIncludeFiltersOutAllProviders`
 (documented in test comments in commit 2).
+
+---
+
+## Bug 6: MR cache grow updates size before realloc succeeds
+
+**Location:** `src/nccl_ofi_mr.cpp`, `nccl_ofi_mr_cache_grow()`, line ~88
+
+**Cause:** The function doubles `cache->size` before calling `realloc()`:
+```cpp
+cache->size *= 2;                    // size updated first
+ptr = realloc(cache->slots, ...);    // realloc may fail
+```
+If `realloc()` fails, `cache->size` has been doubled but the actual allocation
+remains at the old size. Subsequent operations (insert, lookup) use the inflated
+`cache->size` and may access memory beyond the allocation.
+
+**Impact:** On realloc failure (out of memory), the MR cache has an inconsistent
+size field. Any subsequent `memmove()` in `insert_entry` or `del_entry` could
+write past the end of the slots array, causing heap corruption. This is a
+memory safety bug triggered only under memory pressure.
+
+**Test that caught it:** Code review during test development.
+
+**Fix:** Use a local variable for the new size and only update `cache->size`
+after `realloc()` succeeds.

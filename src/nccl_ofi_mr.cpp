@@ -85,15 +85,16 @@ static int nccl_ofi_mr_cache_grow(nccl_ofi_mr_cache_t *cache)
 {
 	void *ptr;
 	int ret = 0;
-	cache->size *= 2;
-	NCCL_OFI_TRACE(NCCL_NET, "Growing cache to size %zu", cache->size);
-	ptr = realloc(cache->slots, cache->size * sizeof(*cache->slots));
+	size_t new_size = cache->size * 2;
+	NCCL_OFI_TRACE(NCCL_NET, "Growing cache to size %zu", new_size);
+	ptr = realloc(cache->slots, new_size * sizeof(*cache->slots));
 	if (!ptr) {
 		NCCL_OFI_WARN("Unable to grow cache");
 		ret = -ENOMEM;
 		goto out;
 	}
 	cache->slots = (nccl_ofi_reg_entry_t **)ptr;
+	cache->size = new_size;
 
 out:
 	return ret;
