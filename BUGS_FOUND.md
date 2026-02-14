@@ -100,37 +100,6 @@ state or crash.
 error path. Remove the block from `this->blocks` and unlink entries from
 `this->entries` in the error path.
 
----
-
-## Bug 4: msgbuff_init validation has uint16_t overflow (latent)
-
-**Location:** `src/nccl_ofi_msgbuff.cpp`, `nccl_ofi_msgbuff_init()`, line ~21
-
-**Cause:** The validation check:
-```cpp
-(uint16_t)(1 << bit_width) <= 2 * max_inprogress
-```
-When `bit_width >= 16`, `(1 << bit_width)` overflows `uint16_t` to 0. The
-check `0 <= 2 * max_inprogress` is always true, so the function accidentally
-rejects these values (the condition triggers the error path).
-
-Additionally, `1 << 16` is undefined behavior when `int` is 16-bit (though
-this is not the case on any current target platform).
-
-**Impact:** Currently benign — the overflow accidentally produces the correct
-rejection behavior. However, the logic is fragile and confusing. A future
-refactor could break it.
-
-**Test that caught it:** `MsgbuffTest.BitWidth16Rejected`
-
-**Fix:** Add an explicit check for `bit_width >= 16` before the shift, or use
-`uint32_t` for the computation:
-```cpp
-if (bit_width >= 16 || (uint32_t)(1 << bit_width) <= 2 * max_inprogress) {
-```
-
----
-
 ## Previously Found (Commit 2)
 
 ## Bug 5: filter_provider_list leaks removed fi_info nodes
