@@ -233,3 +233,17 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Fix:** Changed all 6 instances of `first_error != 0` to `first_error == 0` so the first error is properly captured and returned.
 
 **Test that caught it:** Code review during systematic audit of error-handling patterns.
+
+---
+
+## Bug 9: Memory leak in `rdma_comm_alloc_flush_req` flush buffer error path (FIXED)
+
+**Location:** `src/nccl_ofi_rdma.cpp`, function `rdma_comm_alloc_flush_req()`, line ~3894
+
+**Cause:** When `flush_buff_fl->entry_alloc()` fails (returns NULL), the function returns `-ENOMEM` immediately without freeing the `req` that was already allocated from the freelist on line ~3877. The caller (`flush()`) checks `if (req) req->free(req, false)` in its error path, but `*ret_req` was set to NULL at the top of `rdma_comm_alloc_flush_req`, so the caller's `req` is NULL and the freelist entry is leaked.
+
+**Impact:** Under memory pressure, each failed flush buffer allocation leaks one request from the freelist. Over time this exhausts the request freelist, causing all subsequent flush operations to fail with `-ENOMEM`.
+
+**Test that caught it:** Manual code review of error paths in RDMA flush allocation.
+
+**Fix:** Call `req->free(req, false)` before returning `-ENOMEM` when flush buffer allocation fails. The `free_flush_req` function already handles a NULL `flush_fl_elem` safely.

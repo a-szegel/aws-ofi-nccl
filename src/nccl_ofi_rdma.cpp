@@ -3891,6 +3891,7 @@ static int rdma_comm_alloc_flush_req(nccl_net_ofi_rdma_recv_comm_t *r_comm,
 	flush_data->flush_fl_elem = r_comm->flush_buff_fl->entry_alloc();
 	if (OFI_UNLIKELY(flush_data->flush_fl_elem == NULL)) {
 		NCCL_OFI_WARN("Unable to get allocate flush buffer for device %d", dev_id);
+		req->free(req, false);
 		return -ENOMEM;
 	}
 
