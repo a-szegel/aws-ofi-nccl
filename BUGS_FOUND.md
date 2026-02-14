@@ -261,3 +261,19 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Test that caught it:** Manual code review comparing error paths of `create_send_comm` vs `prepare_recv_comm`.
 
 **Fix:** Add `delete ret_s_comm->nccl_ofi_reqs_fl;` before `free_rdma_send_comm(ret_s_comm)` in the error path.
+
+---
+
+## Bug 11: Two memory leaks in `sendrecv_recv_comm_prepare` (FIXED)
+
+**Location:** `src/nccl_ofi_sendrecv.cpp`, function `sendrecv_recv_comm_prepare()`
+
+**Cause (leak 1, line ~1349):** When the tag limit check fails (`ep->tag + 1 >= device->max_tag`), the function returns `nullptr` without freeing `r_comm` which was `calloc`'d earlier at line ~1323.
+
+**Cause (leak 2, line ~1372):** When `sendrecv_recv_comm_alloc_and_reg_flush_buff()` fails, the error path calls `free(r_comm)` but does NOT `delete r_comm->nccl_ofi_reqs_fl` which was allocated with `new` at line ~1358.
+
+**Impact:** Leak 1: Each failed connection attempt when at the tag limit leaks a `sendrecv_recv_comm_t` struct. Leak 2: Each failed flush buffer registration leaks the request freelist and all its internal allocations.
+
+**Test that caught it:** Manual code review of error paths in sendrecv communicator preparation.
+
+**Fix:** (1) Add `free(r_comm)` before `return nullptr` in the tag limit check. (2) Add `delete r_comm->nccl_ofi_reqs_fl` before `free(r_comm)` in the flush buffer error path.

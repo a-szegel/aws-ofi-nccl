@@ -1345,6 +1345,7 @@ static nccl_net_ofi_sendrecv_recv_comm_t *sendrecv_recv_comm_prepare(nccl_net_of
 		    NCCL_OFI_WARN("Cannot open more connection for device ID %d."
 				  " Maximum is %ld",
 				  dev_id, device->max_tag);
+		    free(r_comm);
 		    return nullptr;
 	}
 	r_comm->tag = ++ep->tag;
@@ -1369,6 +1370,7 @@ static nccl_net_ofi_sendrecv_recv_comm_t *sendrecv_recv_comm_prepare(nccl_net_of
 								  key_pool,
 								  &r_comm->flush_buff, dev_id);
 		if (OFI_UNLIKELY(ret != 0)) {
+			delete r_comm->nccl_ofi_reqs_fl;
 			free(r_comm);
 			return NULL;
 		}
