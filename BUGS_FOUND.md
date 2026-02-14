@@ -317,3 +317,17 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Test that caught it:** Manual code review of error paths.
 
 **Fix:** Added `delete mr_handle;` before `return ret;` in the `reg_mr` failure path.
+
+---
+
+## Bug 15: NULL pointer dereference on malloc failure in `mark_nccl_cpuid` (FIXED)
+
+**Location:** `src/nccl_ofi_topo.cpp`, function `mark_nccl_cpuid()`, line ~615
+
+**Cause:** `malloc(sizeof(nccl_ofi_topo_data_t))` is called without checking the return value for NULL. The very next line dereferences the pointer (`topo_data->is_along_nic_or_gpu_to_root = false`), which would crash if malloc fails.
+
+**Impact:** NULL pointer dereference (crash) if malloc fails during topology discovery. While small allocations rarely fail in practice, this is undefined behavior.
+
+**Test that caught it:** Manual code review.
+
+**Fix:** Added NULL check after malloc, returning NULL (consistent with the function's error return convention) with a WARN log message.
