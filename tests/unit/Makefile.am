@@ -61,6 +61,34 @@ ofiutils_get_providers_test_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
 ofiutils_get_providers_test_CXXFLAGS = -Wno-error
 ofiutils_get_providers_test_LDADD = $(GTEST_LIBS)
 ofiutils_get_providers_test_LDFLAGS = $(GTEST_LDFLAGS) $(GTEST_MOCK_WRAP_FLAGS)
+
+noinst_PROGRAMS += nccl_ofi_math_test
+nccl_ofi_math_test_SOURCES = nccl_ofi_math_test.cpp
+nccl_ofi_math_test_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+nccl_ofi_math_test_CXXFLAGS = -Wno-error
+nccl_ofi_math_test_LDADD = $(GTEST_LIBS)
+nccl_ofi_math_test_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += msgbuff_gtest
+msgbuff_gtest_SOURCES = msgbuff_test.cpp
+msgbuff_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+msgbuff_gtest_CXXFLAGS = -Wno-error
+msgbuff_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+msgbuff_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += idpool_gtest
+idpool_gtest_SOURCES = idpool_test.cpp
+idpool_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+idpool_gtest_CXXFLAGS = -Wno-error
+idpool_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+idpool_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += ep_addr_list_gtest
+ep_addr_list_gtest_SOURCES = ep_addr_list_test.cpp
+ep_addr_list_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+ep_addr_list_gtest_CXXFLAGS = -Wno-error
+ep_addr_list_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+ep_addr_list_gtest_LDFLAGS = $(GTEST_LDFLAGS)
 endif
 
 if WANT_PLATFORM_AWS
