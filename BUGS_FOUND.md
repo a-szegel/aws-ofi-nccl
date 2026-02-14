@@ -277,3 +277,15 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Test that caught it:** Manual code review of error paths in sendrecv communicator preparation.
 
 **Fix:** (1) Add `free(r_comm)` before `return nullptr` in the tag limit check. (2) Add `delete r_comm->nccl_ofi_reqs_fl` before `free(r_comm)` in the flush buffer error path.
+
+---
+
+## Bug 12: Memory leaks in `sendrecv connect()` error paths (Documented only)
+
+**Location:** `src/nccl_ofi_sendrecv.cpp`, function `nccl_net_ofi_sendrecv_ep_t::connect()`, lines ~2022 and ~2030
+
+**Cause:** When `sendrecv_cq_process()` or `connector->test_ready()` fails after `s_comm` has been fully created (including `nccl_ofi_reqs_fl` and `connector`), the error path calls `free(s_comm)` which only frees the struct itself. The `nccl_ofi_reqs_fl` freelist and `connector` object are leaked.
+
+**Impact:** On CQ processing or connection test failures, the request freelist and connector are leaked. This is a rare error path (CQ errors are typically fatal).
+
+**Not fixed:** The `connect()` function is a multi-call state machine. Properly fixing this requires careful analysis of which resources exist at each stage, and whether the caller retries or cleans up. A proper fix would replace `free(s_comm)` with a cleanup function that mirrors `sendrecv_send_comm_close()`.
