@@ -124,6 +124,13 @@ histogram_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
 histogram_gtest_CXXFLAGS = -Wno-error
 histogram_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
 histogram_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += pthread_wrapper_gtest
+pthread_wrapper_gtest_SOURCES = pthread_wrapper_test.cpp
+pthread_wrapper_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+pthread_wrapper_gtest_CXXFLAGS = -Wno-error
+pthread_wrapper_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+pthread_wrapper_gtest_LDFLAGS = $(GTEST_LDFLAGS)
 endif
 
 if WANT_PLATFORM_AWS

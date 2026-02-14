@@ -26,3 +26,4 @@ freelist_gtest
 mr_cache_gtest
 param_gtest
 histogram_gtest
+pthread_wrapper_gtest
