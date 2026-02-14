@@ -289,3 +289,17 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Impact:** On CQ processing or connection test failures, the request freelist and connector are leaked. This is a rare error path (CQ errors are typically fatal).
 
 **Not fixed:** The `connect()` function is a multi-call state machine. Properly fixing this requires careful analysis of which resources exist at each stage, and whether the caller retries or cleans up. A proper fix would replace `free(s_comm)` with a cleanup function that mirrors `sendrecv_send_comm_close()`.
+
+---
+
+## Bug 13: Freelist leak in `prepare_recv_comm` msgbuff failure path (FIXED)
+
+**Location:** `src/nccl_ofi_rdma.cpp`, function `nccl_net_ofi_rdma_ep_t::prepare_recv_comm()`, line ~4457
+
+**Cause:** When `nccl_ofi_msgbuff_init()` fails, the error path calls `free_rdma_recv_comm(r_comm)` directly, which only frees `calloc`'d members (control_rails, rails, ctrl_mailbox, and the struct). It does NOT `delete r_comm->nccl_ofi_reqs_fl` which was allocated with `new` at line ~4446. The function's own `error:` label (line ~4497) correctly handles this cleanup, but the msgbuff failure path bypasses it.
+
+**Impact:** Each failed msgbuff allocation leaks the request freelist and all its internal allocations.
+
+**Test that caught it:** Manual code review of error paths.
+
+**Fix:** Changed the msgbuff failure path from inline `free_rdma_recv_comm(r_comm); return NULL;` to `goto error;` which uses the existing comprehensive cleanup at the `error:` label.

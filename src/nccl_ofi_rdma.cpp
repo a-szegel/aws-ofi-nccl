@@ -4454,8 +4454,7 @@ static nccl_net_ofi_rdma_recv_comm_t *prepare_recv_comm(nccl_net_ofi_rdma_domain
 						NCCL_OFI_RDMA_MSG_SEQ_NUM_START);
 	if (!r_comm->msgbuff) {
 		NCCL_OFI_WARN("Failed to allocate and initialize message buffer");
-		free_rdma_recv_comm(r_comm);
-		return NULL;
+		goto error;
 	}
 
 	r_comm->ctrl_buff_fl = new nccl_ofi_freelist(sizeof(nccl_net_ofi_rdma_close_msg_t),
