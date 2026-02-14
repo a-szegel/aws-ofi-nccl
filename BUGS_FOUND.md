@@ -303,3 +303,17 @@ Since `first_error` starts at 0, the condition `first_error != 0` is false when 
 **Test that caught it:** Manual code review of error paths.
 
 **Fix:** Changed the msgbuff failure path from inline `free_rdma_recv_comm(r_comm); return NULL;` to `goto error;` which uses the existing comprehensive cleanup at the `error:` label.
+
+---
+
+## Bug 14: MR handle leak in `regMrSymDmaBuf` on `reg_mr` failure (FIXED)
+
+**Location:** `src/gin/nccl_ofi_gin.cpp`, function `nccl_ofi_gin_comm::regMrSymDmaBuf()`, line ~284
+
+**Cause:** When `gin_ep.reg_mr()` fails, the function returns the error code without `delete mr_handle`, which was allocated with `new` at line ~273. All other error paths in this function (GDRCopy failure, FI_KEY_NOTAVAIL, duplicate insert, all_gather failure) correctly `delete mr_handle` before returning.
+
+**Impact:** Each failed MR registration leaks a `gin_sym_mr_handle` object.
+
+**Test that caught it:** Manual code review of error paths.
+
+**Fix:** Added `delete mr_handle;` before `return ret;` in the `reg_mr` failure path.
