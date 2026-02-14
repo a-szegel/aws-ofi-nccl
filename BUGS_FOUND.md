@@ -204,3 +204,32 @@ correctly throws by value.
 -		throw new std::runtime_error("Failed to process pending reqs");
 +		throw std::runtime_error("Failed to process pending reqs");
 ```
+
+---
+
+## Bug 8: Inverted `first_error` condition in cleanup functions (FIXED)
+
+**Location:** `src/nccl_ofi_net.cpp`, lines 783, 799, 808 (`release_all_domain_and_ep`) and lines 962, 971, 979 (`release_all_ep`)
+
+**Cause:** Both `release_all_domain_and_ep()` and `release_all_ep()` use a `first_error` variable initialized to 0 to capture the first error during cleanup. However, the conditions guarding the assignment are inverted:
+
+```cpp
+int ret, first_error = 0;
+...
+if (ret != 0) {
+    if (first_error != 0) {   // BUG: should be == 0
+        first_error = ret;     // Never reached on first error!
+    }
+}
+```
+
+Since `first_error` starts at 0, the condition `first_error != 0` is false when the first error occurs, so the error is silently swallowed. All 6 instances across both functions have this same inverted logic.
+
+**Impact:** During device/domain/endpoint cleanup, if any `release_ep()` or `release_domain()` call fails, the error is silently discarded and the function returns 0 (success). This means:
+- Callers never learn that cleanup failed
+- Resource leaks during shutdown go unreported
+- The `FI_EBUSY` fallback for non-empty tables is also never set
+
+**Fix:** Changed all 6 instances of `first_error != 0` to `first_error == 0` so the first error is properly captured and returned.
+
+**Test that caught it:** Code review during systematic audit of error-handling patterns.

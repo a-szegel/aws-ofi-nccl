@@ -780,7 +780,7 @@ int nccl_net_ofi_device_t::release_all_domain_and_ep()
 			ret = ep->release_ep(true, true);
 			if (ret != 0) {
 				NCCL_OFI_WARN("Freeing endpoint failed: %d", ret);
-				if (first_error != 0) {
+				if (first_error == 0) {
 					first_error = ret;
 				}
 			}
@@ -796,7 +796,7 @@ int nccl_net_ofi_device_t::release_all_domain_and_ep()
 		/* domain->release takes the domain lock, and removes itself
 		 * from domain_table. Skipping device lock here.*/
 		ret = domain->release_domain(true, true);
-		if (ret != 0 && first_error != 0) {
+		if (ret != 0 && first_error == 0) {
 			first_error = ret;
 		}
 
@@ -805,7 +805,7 @@ int nccl_net_ofi_device_t::release_all_domain_and_ep()
 	if (OFI_UNLIKELY(!this->domain_table.empty())) {
 		NCCL_OFI_WARN("%zu domains still active after cleanup",
 			      this->domain_table.size());
-		if (first_error != 0) {
+		if (first_error == 0) {
 			first_error = -FI_EBUSY; // Anything else than above
 		}
 	}
@@ -959,7 +959,7 @@ int nccl_net_ofi_domain_t::release_all_ep()
 		 * from ep_table. Skipping device lock here.
 		 */
 		ret = ep->release_ep(true, true);
-		if (ret != 0 && first_error != 0) {
+		if (ret != 0 && first_error == 0) {
 			first_error = ret;
 		}
 	}
@@ -968,7 +968,7 @@ int nccl_net_ofi_domain_t::release_all_ep()
 		NCCL_OFI_WARN("%zu inactive endpoint are still open after cleanup",
 			       this->unreleased_inactive_ep_counter);
 
-		if (first_error != 0) {
+		if (first_error == 0) {
 			first_error = -FI_EBUSY; // Anything else than above
 		}
 	}
@@ -976,7 +976,7 @@ int nccl_net_ofi_domain_t::release_all_ep()
 	if (OFI_UNLIKELY(!this->ep_table.empty())) {
 		NCCL_OFI_WARN("%zu endpoint still active after cleanup",
 			       this->ep_table.size());
-		if (first_error != 0) {
+		if (first_error == 0) {
 			first_error = -FI_EBUSY; // Anything else than above
 		}
 	}
