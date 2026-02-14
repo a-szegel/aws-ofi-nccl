@@ -138,6 +138,31 @@ TEST(RoundUp, Basic)
 	EXPECT_EQ(NCCL_OFI_ROUND_UP((size_t)65, (size_t)64), 128UL);
 }
 
+
+/* Verify NCCL_OFI_IS_PTR_ALIGNED with real pointers. */
+TEST(IsPtrAligned, BasicPointerAlignment)
+{
+	alignas(64) char buf[128];
+	EXPECT_TRUE(NCCL_OFI_IS_PTR_ALIGNED(&buf[0], 64));
+	EXPECT_TRUE(NCCL_OFI_IS_PTR_ALIGNED(&buf[0], 1));
+	EXPECT_FALSE(NCCL_OFI_IS_PTR_ALIGNED(&buf[1], 64));
+}
+
+/* Verify NCCL_OFI_ROUND_UP_TO_POWER_OF_TWO with different integer types. */
+TEST(RoundUpToPowerOfTwo, DifferentTypes)
+{
+	EXPECT_EQ(NCCL_OFI_ROUND_UP_TO_POWER_OF_TWO((uint8_t)5), (uint8_t)8);
+	EXPECT_EQ(NCCL_OFI_ROUND_UP_TO_POWER_OF_TWO((uint16_t)1000), (uint16_t)1024);
+	EXPECT_EQ(NCCL_OFI_ROUND_UP_TO_POWER_OF_TWO((uint64_t)0x80000001ULL), (uint64_t)0x100000000ULL);
+}
+
+/* Verify NCCL_OFI_DIV_CEIL with mixed type combinations. */
+TEST(DivCeil, MixedTypes)
+{
+	EXPECT_EQ(NCCL_OFI_DIV_CEIL((size_t)100, (int)3), (size_t)34);
+	EXPECT_EQ(NCCL_OFI_DIV_CEIL((uint32_t)UINT32_MAX, (uint32_t)2), (uint32_t)2147483648U);
+}
+
 int main(int argc, char **argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

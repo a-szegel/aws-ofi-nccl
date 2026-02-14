@@ -161,6 +161,26 @@ TEST_F(FreelistTest, EntrySpacing) {
 	for (auto *e : entries) fl.entry_free(e);
 }
 
+
+TEST_F(FreelistTest, InitCallbackFailure) {
+	auto bad_init = [](void *entry) -> int { return -ENOMEM; };
+	EXPECT_THROW(
+		nccl_ofi_freelist(64, 4, 4, 0, bad_init, nullptr, "test", false),
+		std::runtime_error
+	);
+}
+
+TEST_F(FreelistTest, MultipleGrowCycles) {
+	nccl_ofi_freelist fl(64, 2, 2, 0, nullptr, nullptr, "test", false);
+	std::vector<nccl_ofi_freelist::fl_entry *> entries;
+	for (int i = 0; i < 20; i++) {
+		auto *e = fl.entry_alloc();
+		ASSERT_NE(nullptr, e) << "alloc failed at i=" << i;
+		entries.push_back(e);
+	}
+	for (auto *e : entries) fl.entry_free(e);
+}
+
 int main(int argc, char **argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

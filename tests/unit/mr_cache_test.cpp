@@ -129,6 +129,56 @@ TEST_F(MrCacheTest, InsertAndDeleteMany) {
 	EXPECT_EQ(0u, cache->used);
 }
 
+
+TEST_F(MrCacheTest, HitMissCounters) {
+	EXPECT_EQ(0u, cache->hit_count);
+	EXPECT_EQ(0u, cache->miss_count);
+	EXPECT_EQ(nullptr, lookup(0, 1));
+	EXPECT_EQ(0u, cache->hit_count);
+	EXPECT_EQ(1u, cache->miss_count);
+	EXPECT_EQ(0, insert(0, 1, (void *)0x100));
+	EXPECT_NE(nullptr, lookup(0, 1));
+	EXPECT_EQ(1u, cache->hit_count);
+	EXPECT_EQ(1u, cache->miss_count);
+}
+
+TEST_F(MrCacheTest, RefcountMultipleLookups) {
+	EXPECT_EQ(0, insert(0, 1, (void *)0x100));
+	lookup(0, 1);
+	lookup(0, 1);
+	EXPECT_EQ(0, nccl_ofi_mr_cache_del_entry(cache, (void *)0x100));
+	EXPECT_EQ(0, nccl_ofi_mr_cache_del_entry(cache, (void *)0x100));
+	EXPECT_EQ(1, nccl_ofi_mr_cache_del_entry(cache, (void *)0x100));
+	EXPECT_EQ(-ENOENT, nccl_ofi_mr_cache_del_entry(cache, (void *)0x100));
+}
+
+TEST_F(MrCacheTest, InsertAfterDelete) {
+	EXPECT_EQ(0, insert(0, 1, (void *)0x100));
+	EXPECT_EQ(1, nccl_ofi_mr_cache_del_entry(cache, (void *)0x100));
+	EXPECT_EQ(0, insert(0, 1, (void *)0x200));
+	EXPECT_EQ((void *)0x200, lookup(0, 1));
+}
+
+TEST_F(MrCacheTest, SortedInsertionOrder) {
+	EXPECT_EQ(0, insert(4 * PAGE, 1, (void *)0x4));
+	EXPECT_EQ(0, insert(2 * PAGE, 1, (void *)0x2));
+	EXPECT_EQ(0, insert(0, 1, (void *)0x0));
+	EXPECT_EQ(0, insert(3 * PAGE, 1, (void *)0x3));
+	EXPECT_EQ(0, insert(PAGE, 1, (void *)0x1));
+	for (size_t i = 0; i < 5; i++)
+		EXPECT_EQ((void *)(uintptr_t)i, lookup(i * PAGE, 1));
+}
+
+TEST_F(MrCacheTest, UsedCountTracking) {
+	EXPECT_EQ(0u, cache->used);
+	insert(0, 1, (void *)0x1);
+	EXPECT_EQ(1u, cache->used);
+	insert(PAGE, 1, (void *)0x2);
+	EXPECT_EQ(2u, cache->used);
+	nccl_ofi_mr_cache_del_entry(cache, (void *)0x1);
+	EXPECT_EQ(1u, cache->used);
+}
+
 int main(int argc, char **argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

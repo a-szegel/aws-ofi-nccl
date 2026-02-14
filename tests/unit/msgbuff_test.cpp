@@ -6,6 +6,8 @@
  */
 
 #include <gtest/gtest.h>
+#include <thread>
+#include <atomic>
 #include "config.h"
 #include "nccl_ofi.h"
 #include "test-logger.h"
@@ -244,6 +246,88 @@ TEST_F(MsgbuffTest, NonZeroStartSeq)
 	/* Insert at start_seq=5 should work */
 	EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, 5, &data, NCCL_OFI_MSGBUFF_REQ, &stat),
 		  NCCL_OFI_MSGBUFF_SUCCESS);
+}
+
+
+TEST_F(MsgbuffTest, CompleteAlreadyCompleted)
+{
+	msgbuff = nccl_ofi_msgbuff_init(4, 4, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	int data = 1;
+	nccl_ofi_msgbuff_status_t stat;
+	nccl_ofi_msgbuff_insert(msgbuff, 0, &data, NCCL_OFI_MSGBUFF_REQ, &stat);
+	EXPECT_EQ(nccl_ofi_msgbuff_complete(msgbuff, 0, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+	EXPECT_EQ(nccl_ofi_msgbuff_complete(msgbuff, 0, &stat), NCCL_OFI_MSGBUFF_INVALID_IDX);
+	EXPECT_EQ(stat, NCCL_OFI_MSGBUFF_COMPLETED);
+}
+
+TEST_F(MsgbuffTest, RetrieveNotStarted)
+{
+	msgbuff = nccl_ofi_msgbuff_init(4, 4, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	void *elem = nullptr;
+	nccl_ofi_msgbuff_elemtype_t type;
+	nccl_ofi_msgbuff_status_t stat;
+	EXPECT_EQ(nccl_ofi_msgbuff_retrieve(msgbuff, 0, &elem, &type, &stat), NCCL_OFI_MSGBUFF_INVALID_IDX);
+	EXPECT_EQ(stat, NCCL_OFI_MSGBUFF_NOTSTARTED);
+}
+
+TEST_F(MsgbuffTest, ReplaceCompleted)
+{
+	msgbuff = nccl_ofi_msgbuff_init(4, 4, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	int data = 1;
+	nccl_ofi_msgbuff_status_t stat;
+	nccl_ofi_msgbuff_insert(msgbuff, 0, &data, NCCL_OFI_MSGBUFF_REQ, &stat);
+	nccl_ofi_msgbuff_complete(msgbuff, 0, &stat);
+	EXPECT_EQ(nccl_ofi_msgbuff_replace(msgbuff, 0, &data, NCCL_OFI_MSGBUFF_BUFF, &stat), NCCL_OFI_MSGBUFF_INVALID_IDX);
+	EXPECT_EQ(stat, NCCL_OFI_MSGBUFF_COMPLETED);
+}
+
+TEST_F(MsgbuffTest, OutOfOrderInsert)
+{
+	msgbuff = nccl_ofi_msgbuff_init(4, 4, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	int data = 1;
+	nccl_ofi_msgbuff_status_t stat;
+	EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, 2, &data, NCCL_OFI_MSGBUFF_REQ, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+	EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, 0, &data, NCCL_OFI_MSGBUFF_REQ, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+	EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, 1, &data, NCCL_OFI_MSGBUFF_REQ, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+}
+
+TEST_F(MsgbuffTest, ConcurrentOperations)
+{
+	msgbuff = nccl_ofi_msgbuff_init(64, 8, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	std::atomic<int> errors{0};
+	auto worker = [&](uint16_t start) {
+		int data = start;
+		for (uint16_t i = start; i < start + 32; i++) {
+			nccl_ofi_msgbuff_status_t stat;
+			auto r = nccl_ofi_msgbuff_insert(msgbuff, i, &data, NCCL_OFI_MSGBUFF_REQ, &stat);
+			if (r == NCCL_OFI_MSGBUFF_SUCCESS)
+				nccl_ofi_msgbuff_complete(msgbuff, i, &stat);
+		}
+	};
+	std::thread t1(worker, 0);
+	std::thread t2(worker, 32);
+	t1.join();
+	t2.join();
+	EXPECT_EQ(0, errors.load());
+}
+
+TEST_F(MsgbuffTest, FullCycleRefill)
+{
+	msgbuff = nccl_ofi_msgbuff_init(4, 4, 0);
+	ASSERT_NE(msgbuff, nullptr);
+	int data = 1;
+	nccl_ofi_msgbuff_status_t stat;
+	for (uint16_t i = 0; i < 4; i++)
+		EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, i, &data, NCCL_OFI_MSGBUFF_REQ, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+	for (uint16_t i = 0; i < 4; i++)
+		EXPECT_EQ(nccl_ofi_msgbuff_complete(msgbuff, i, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
+	for (uint16_t i = 4; i < 8; i++)
+		EXPECT_EQ(nccl_ofi_msgbuff_insert(msgbuff, i, &data, NCCL_OFI_MSGBUFF_REQ, &stat), NCCL_OFI_MSGBUFF_SUCCESS);
 }
 
 int main(int argc, char **argv)

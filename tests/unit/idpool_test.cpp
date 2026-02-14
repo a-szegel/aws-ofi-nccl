@@ -7,6 +7,9 @@
 
 #include <gtest/gtest.h>
 #include <stdexcept>
+#include <thread>
+#include <vector>
+#include <atomic>
 #include "config.h"
 #include "nccl_ofi.h"
 #include "test-logger.h"
@@ -165,6 +168,52 @@ TEST_F(IdpoolTest, LargePool)
 	for (size_t i = 0; i < 1000; i++) {
 		EXPECT_EQ(pool.allocate_id(), i);
 	}
+}
+
+
+TEST_F(IdpoolTest, ConcurrentAllocFree)
+{
+	nccl_ofi_idpool_t pool(256);
+	std::atomic<int> errors{0};
+	auto worker = [&]() {
+		for (int i = 0; i < 500; i++) {
+			size_t id = pool.allocate_id();
+			if (id == FI_KEY_NOTAVAIL) continue;
+			if (id >= 256) { errors++; continue; }
+			pool.free_id(id);
+		}
+	};
+	std::vector<std::thread> threads;
+	for (int i = 0; i < 8; i++)
+		threads.emplace_back(worker);
+	for (auto &t : threads) t.join();
+	EXPECT_EQ(0, errors.load());
+}
+
+TEST_F(IdpoolTest, GetSizeIsCapacity)
+{
+	nccl_ofi_idpool_t pool(100);
+	EXPECT_EQ(pool.get_size(), 100UL);
+	pool.allocate_id();
+	EXPECT_EQ(pool.get_size(), 100UL);
+}
+
+TEST_F(IdpoolTest, SizeBelowBoundary63)
+{
+	TestableIdpool pool(63);
+	EXPECT_EQ(pool.get_vector_size(), 1UL);
+	EXPECT_EQ(pool.get_element(0), 0x7FFFFFFFFFFFFFFFULL);
+	for (size_t i = 0; i < 63; i++)
+		EXPECT_EQ(pool.allocate_id(), i);
+	EXPECT_EQ(pool.allocate_id(), FI_KEY_NOTAVAIL);
+}
+
+TEST_F(IdpoolTest, ExactBoundary128)
+{
+	TestableIdpool pool(128);
+	EXPECT_EQ(pool.get_vector_size(), 2UL);
+	EXPECT_EQ(pool.get_element(0), 0xFFFFFFFFFFFFFFFFULL);
+	EXPECT_EQ(pool.get_element(1), 0xFFFFFFFFFFFFFFFFULL);
 }
 
 int main(int argc, char **argv)

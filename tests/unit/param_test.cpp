@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
+#include <climits>
 
 #include "nccl_ofi_param_impl.h"
 #include "nccl_ofi_log.h"
@@ -161,6 +162,42 @@ TEST_F(ParamTest, BoolParam) {
 TEST_F(ParamTest, StringParam) {
 	ofi_nccl_param_impl<std::string> p("OFI_NCCL_TEST_STRING_UNUSED", "hello");
 	EXPECT_STREQ("hello", p.get_string());
+}
+
+
+TEST_F(ParamTest, StringParamFromEnv) {
+	setenv("OFI_NCCL_TEST_STR_ENV", "hello_world", 1);
+	ofi_nccl_param_impl<std::string> p("OFI_NCCL_TEST_STR_ENV", "default");
+	EXPECT_STREQ("hello_world", p.get_string());
+	EXPECT_EQ(ParamSource::ENVIRONMENT, p.get_source());
+	unsetenv("OFI_NCCL_TEST_STR_ENV");
+}
+
+TEST_F(ParamTest, UnsignedLongBoundary) {
+	EXPECT_EQ(0UL, *ofi_nccl_param_string_to_value<unsigned long>("0"));
+	auto v = ofi_nccl_param_string_to_value<unsigned long>("18446744073709551615");
+	ASSERT_TRUE(v.has_value());
+	EXPECT_EQ(ULONG_MAX, *v);
+}
+
+TEST_F(ParamTest, IntOverflow) {
+	EXPECT_FALSE(ofi_nccl_param_string_to_value<int>("2147483648"));
+}
+
+TEST_F(ParamTest, DoubleSetBeforeGet) {
+	ofi_nccl_param_impl<int> p("OFI_NCCL_TEST_DBLSET_UNUSED", 1);
+	EXPECT_EQ(0, p.set(10));
+	EXPECT_EQ(0, p.set(20));
+	EXPECT_EQ(20, p.get());
+}
+
+TEST_F(ParamTest, EmptyStringEnvThrows) {
+	setenv("OFI_NCCL_TEST_EMPTY_STR", "", 1);
+	EXPECT_THROW(
+		ofi_nccl_param_impl<std::string>("OFI_NCCL_TEST_EMPTY_STR", "default"),
+		std::runtime_error
+	);
+	unsetenv("OFI_NCCL_TEST_EMPTY_STR");
 }
 
 int main(int argc, char **argv)
