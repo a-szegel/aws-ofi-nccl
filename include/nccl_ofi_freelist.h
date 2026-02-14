@@ -196,7 +196,7 @@ public:
 	 */
 	void entry_free(fl_entry *entry)
 	{
-		size_t user_entry_size = this->entry_size - MEMCHECK_REDZONE_SIZE;
+		size_t user_entry_size = this->entry_size - this->memcheck_redzone_size;
 
 		assert(entry);
 
@@ -215,7 +215,7 @@ public:
 	 */
 	void entry_set_undefined(void *entry_p)
 	{
-		size_t user_entry_size = this->entry_size - MEMCHECK_REDZONE_SIZE;
+		size_t user_entry_size = this->entry_size - this->memcheck_redzone_size;
 
 		/* Entry allocated by the user is accessible but
 		 * undefined. Note that this allows the user to
