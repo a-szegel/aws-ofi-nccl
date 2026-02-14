@@ -171,3 +171,36 @@ memory safety bug triggered only under memory pressure.
 
 **Fix:** Use a local variable for the new size and only update `cache->size`
 after `realloc()` succeeds.
+
+---
+
+## Bug 7: CM listener accept() uses "throw new" instead of "throw"
+
+**Location:** `src/cm/nccl_ofi_cm.cpp`, `nccl_ofi_cm_listener::accept()`, line 71
+
+**Cause:** The code uses:
+```cpp
+throw new std::runtime_error("Failed to process pending reqs");
+```
+instead of:
+```cpp
+throw std::runtime_error("Failed to process pending reqs");
+```
+`throw new` allocates the exception on the heap and throws a pointer
+(`std::runtime_error*`), not the exception object itself.
+
+**Impact:** All catch blocks in the codebase catch `const std::exception &e`
+(by reference). A thrown pointer will not match any of these handlers, causing
+`std::terminate()` to be called and the process to crash. Additionally, the
+heap-allocated exception object is never deleted, causing a memory leak (though
+the crash makes this moot). Every other `throw` in the codebase (40+ instances)
+correctly throws by value.
+
+**Test that caught it:** Code review during systematic examination of
+`src/cm/nccl_ofi_cm.cpp`.
+
+**Fix:** Remove `new` to throw by value, matching all other throw statements.
+```diff
+-		throw new std::runtime_error("Failed to process pending reqs");
++		throw std::runtime_error("Failed to process pending reqs");
+```
