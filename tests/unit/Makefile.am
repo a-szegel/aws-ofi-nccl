@@ -89,6 +89,41 @@ ep_addr_list_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
 ep_addr_list_gtest_CXXFLAGS = -Wno-error
 ep_addr_list_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
 ep_addr_list_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += scheduler_gtest
+scheduler_gtest_SOURCES = scheduler_test.cpp
+scheduler_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+scheduler_gtest_CXXFLAGS = -Wno-error
+scheduler_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+scheduler_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += freelist_gtest
+freelist_gtest_SOURCES = freelist_test.cpp
+freelist_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+freelist_gtest_CXXFLAGS = -Wno-error
+freelist_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+freelist_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += mr_cache_gtest
+mr_cache_gtest_SOURCES = mr_cache_test.cpp
+mr_cache_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+mr_cache_gtest_CXXFLAGS = -Wno-error
+mr_cache_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+mr_cache_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += param_gtest
+param_gtest_SOURCES = param_test.cpp
+param_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+param_gtest_CXXFLAGS = -Wno-error
+param_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+param_gtest_LDFLAGS = $(GTEST_LDFLAGS)
+
+noinst_PROGRAMS += histogram_gtest
+histogram_gtest_SOURCES = histogram_gtest.cpp
+histogram_gtest_CPPFLAGS = $(AM_CPPFLAGS) $(GTEST_CPPFLAGS)
+histogram_gtest_CXXFLAGS = -Wno-error
+histogram_gtest_LDADD = $(GTEST_LIBS) $(LDADD)
+histogram_gtest_LDFLAGS = $(GTEST_LDFLAGS)
 endif
 
 if WANT_PLATFORM_AWS

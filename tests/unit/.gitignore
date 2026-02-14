@@ -21,3 +21,8 @@ nccl_ofi_math_test
 msgbuff_gtest
 idpool_gtest
 ep_addr_list_gtest
+scheduler_gtest
+freelist_gtest
+mr_cache_gtest
+param_gtest
+histogram_gtest
