@@ -282,6 +282,7 @@ int nccl_ofi_gin_comm::regMrSymDmaBuf(nccl_ofi_mr_ckey_ref ckey, void *data_ptr,
 	int ret = gin_ep.reg_mr(ckey, type, &mr_handle->local_handle);
 	if (ret != 0) {
 		NCCL_OFI_WARN("Local endpoint memory registration failed: %d", ret);
+		delete mr_handle;
 		return ret;
 	}
 

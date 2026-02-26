@@ -3891,6 +3891,7 @@ static int rdma_comm_alloc_flush_req(nccl_net_ofi_rdma_recv_comm_t *r_comm,
 	flush_data->flush_fl_elem = r_comm->flush_buff_fl->entry_alloc();
 	if (OFI_UNLIKELY(flush_data->flush_fl_elem == NULL)) {
 		NCCL_OFI_WARN("Unable to get allocate flush buffer for device %d", dev_id);
+		req->free(req, false);
 		return -ENOMEM;
 	}
 
@@ -4453,8 +4454,7 @@ static nccl_net_ofi_rdma_recv_comm_t *prepare_recv_comm(nccl_net_ofi_rdma_domain
 						NCCL_OFI_RDMA_MSG_SEQ_NUM_START);
 	if (!r_comm->msgbuff) {
 		NCCL_OFI_WARN("Failed to allocate and initialize message buffer");
-		free_rdma_recv_comm(r_comm);
-		return NULL;
+		goto error;
 	}
 
 	r_comm->ctrl_buff_fl = new nccl_ofi_freelist(sizeof(nccl_net_ofi_rdma_close_msg_t),
@@ -6126,6 +6126,7 @@ int nccl_net_ofi_rdma_ep_t::create_send_comm(nccl_net_ofi_rdma_send_comm_t **s_c
 		domain_ptr->domain_lock.lock();
 		this->decrement_ref_cnt();
 		domain_ptr->domain_lock.unlock();
+		delete ret_s_comm->nccl_ofi_reqs_fl;
 		free_rdma_send_comm(ret_s_comm);
 	}
 

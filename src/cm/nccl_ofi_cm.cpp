@@ -68,7 +68,7 @@ nccl_ofi_cm_receiver *nccl_ofi_cm_listener::accept()
 	std::lock_guard lock(resources.cm_mutex);
 	int ret = resources.pending_reqs_queue.process_pending_reqs();
 	if (ret != 0) {
-		throw new std::runtime_error("Failed to process pending reqs");
+		throw std::runtime_error("Failed to process pending reqs");
 	}
 
 	if (ready_receiver_queue.empty()) {

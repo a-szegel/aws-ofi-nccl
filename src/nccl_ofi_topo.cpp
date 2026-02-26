@@ -613,6 +613,10 @@ static hwloc_obj_t mark_nccl_cpuid(hwloc_topology_t topo,
 #endif
 			if (!(node->userdata)) {
 				nccl_ofi_topo_data_t *topo_data = (nccl_ofi_topo_data_t *)malloc(sizeof(nccl_ofi_topo_data_t));
+				if (topo_data == NULL) {
+					NCCL_OFI_WARN("Failed to allocate topo data");
+					return NULL;
+				}
 				topo_data->is_along_nic_or_gpu_to_root = false;
 				node->userdata = topo_data;
 			}

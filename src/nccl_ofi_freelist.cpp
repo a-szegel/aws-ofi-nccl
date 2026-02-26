@@ -61,7 +61,6 @@ void nccl_ofi_freelist::init_internal(size_t entry_size_arg,
 	this->num_allocated_entries = 0;
 	this->num_in_use_entries = 0;
 	this->max_entry_count = max_entry_count_arg;
-	this->increase_entry_count = increase_entry_count_arg;
 	this->entries = NULL;
 	this->blocks = NULL;
 
